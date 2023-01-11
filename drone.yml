@@ -16,7 +16,7 @@ steps:
 - name: publish
   environment:
     CONTAINER_NAME: "kustosz"
-    CONTAINER_VERSION: "8.22.0"
+    CONTAINER_VERSION: "22.08.0"
     DOCKERIO_USERNAME:
       from_secret: username.docker.io
     DOCKERIO_PASSWORD:
