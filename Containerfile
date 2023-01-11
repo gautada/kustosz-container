@@ -47,39 +47,36 @@ RUN /bin/chown -R $USER:$USER /mnt/volumes/container \
 # │ APPLICATION        │
 # ╰――――――――――――――――――――╯
 # RUN /sbin/apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing rabbitmq-server
-RUN apk add --no-cache build-base python3-dev py3-pip py3-wheel py3-redis py3-psycopg
+RUN apk add --no-cache build-base git nginx python3-dev py3-pip py3-wheel py3-redis py3-psycopg
 
 RUN pip install kustosz
 RUN pip install gunicorn
 
-RUN /bin/ln -svf /etc/container/settings.yaml /home/$USER/settings.yaml \
+RUN /bin/mkdir -p /home/$USER/settings \
+ && /bin/ln -svf /etc/container/settings.yaml /home/$USER/settings/settings.yaml \
  && curl https://raw.githubusercontent.com/KustoszApp/server/main/settings/settings.yaml > /etc/container/settings.yaml
 
-RUN /bin/ln -svf /etc/container/settings.local.yaml /home/$USER/settings.local.yaml \
+RUN /bin/ln -svf /etc/container/settings.local.yaml /home/$USER/settings/settings.local.yaml \
  && /bin/ln -svf /mnt/volumes/configmaps/settings.local.yaml /etc/container/settings.local.yaml \
  && /bin/ln -svf /mnt/volumes/container/settings.local.yaml /mnt/volumes/configmaps/settings.local.yaml
 
-# RUN mkdir -p /etc/rabbitmq/conf.d
-# RUN /bin/ln -svf /etc/container/default.conf /etc/rabbitmq/conf.d/default.conf \
-#  && /bin/ln -svf /mnt/volumes/configmaps/default.conf /etc/container/default.conf \
-#  && /bin/ln -svf /mnt/volumes/container/default.conf /mnt/volumes/configmaps/default.conf
-# RUN /bin/touch /home/$USER/.erlang.cookie \
-#  && chown $USER:$USER /home/$USER/.erlang.cookie
-# RUN sed "s/default_password/$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 64 | shasum | shasum | base64 | head -c 20)/" /etc/rabbitmq/conf.d/default.conf >
-# RUN /bin/ln -svf /etc/container/rabbitmq.conf /etc/rabbitmq/rabbitmq.conf \
-#   && /bin/ln -svf /mnt/volumes/configmaps/rabbitmq.conf /etc/container/rabbitmq.conf \
-#   && /bin/ln -svf /mnt/volumes/container/rabbitmq.conf /mnt/volumes/configmaps/rabbitmq.conf
-#
-# RUN /bin/ln -svf /etc/container/rabbitmq-env.conf /etc/rabbitmq/rabbitmq-env.conf \
-#  && /bin/ln -svf /mnt/volumes/configmaps/rabbitmq-env.conf /etc/container/rabbitmq-env.conf \
-#  && /bin/ln -svf /mnt/volumes/container/rabbitmq-env.conf /mnt/volumes/configmaps/rabbitmq-env.conf
-#
-# Note: This command enable RMQ management plugin
-# RUN /usr/sbin/rabbitmq-plugins enable --offline rabbitmq_management
-# RUN pip3 install pika
-# RUN ln -s /mnt/volumes/container/scripts /home/$USER/scripts
-# RUN /bin/mkdir -p /opt/rabbit/mnesia \
-# && /bin/chown $USER:$USER /opt/rabbit/mnesia
+RUN /bin/ln -svf /mnt/volumes/container/db.sqlite3 /home/$USER/db.sqlite3
+
+COPY kustosz-profile.sh /etc/container/kustosz-profile.sh
+RUN /bin/ln -fsv /etc/container/kustosz-profile.sh /etc/profile.d/kustosz-profile.sh
+
+RUN mkdir -p /home/$USER/frontend \
+ && cd /home/$USER/frontend \
+ && curl -L https://github.com/KustoszApp/web-ui/releases/download/22.08.0/kustosz.tar.xz -o kustosz.tar.xz \
+ && tar xf  kustosz.tar.xz \
+ && rm kustosz.tar.xz \
+ && cd .. \
+ && chown $USER:$USER -R /home/$USER/frontend
+# RUN git clone --branch 22.08.0 https://github.com/KustoszApp/web-ui.git /home/$USER/web-ui
+
+# RUN chown $USER:$USER -R /var/lib/nginx 
+RUN mv /etc/nginx/http.d/default.conf /etc/nginx/http.d/default.conf~
+COPY kustosz-nginx.conf /etc/nginx/http.d/kustosz-nginx.conf
  
 # ╭――――――――――――――――――――╮
 # │ CONTAINER          │
@@ -90,3 +87,8 @@ VOLUME /mnt/volumes/configmaps
 VOLUME /mnt/volumes/container
 EXPOSE 5672/tcp 15672/tcp
 WORKDIR /home/$USER
+
+RUN mkdir -p ~/.celery/queue
+# RUN source /etc/container/kustosz-profile.sh && /usr/bin/kustosz-manager migrate \
+#  && /usr/bin/kustosz-manager createcachetable
+#  && /usr/bin/kustosz-manager createcachetable

@@ -7,7 +7,7 @@ services:
       - 192.168.4.203
       - 192.168.4.204
     environment:
-      - RABBITMQ_ERLANG_COOKIE=UGH
+      - X=1
     build:
       args:
         ALPINE_VERSION: "latest"
@@ -17,7 +17,7 @@ services:
       tags:
         - "rabbitmq:dev"
     image: "rabbitmq:dev"
-    hostname: "rabbitmq"
+    hostname: "kustosz"
     ports:
       - "8080:8080"
     volumes:
